@@ -7,11 +7,11 @@ import hashlib
 from utils.supabase_client import supabase
 from utils.sanitize import sanitize_for_json
 from utils.calculate import calculate_distance, convert_speed_to_kmph
-from utils.corner_exit_analysis import analyze_corner_exit_and_feedback
+from utils.analysis.corner_exit_analysis import analyze_corner_exit_and_feedback
 from services.purification import remove_straight_sections, correct_autoblip_throttle
 from services.insert import extract_value, chunked_insert, chunked_insert_lap_raw, fetch_all_controls, fetch_all_vehicle_status
 from services.analyze_sector_times import upload_sector_results, get_sector_summary
-
+from utils.analysis.brake_analysis import detect_trail_braking
 
 router = APIRouter()
 
@@ -128,6 +128,9 @@ async def analyze_motec_csv(
 
             upload_sector_results(supabase, lap_id, user_id, track_name, df)
 
+            # 트레일 브레이킹 감지
+            trail_braking_segments = detect_trail_braking(control_df) 
+
             # ✅ 코너 탈출 구간 분석
             exit_segments = analyze_corner_exit_and_feedback(control_df, vehicle_df)
 
@@ -137,7 +140,8 @@ async def analyze_motec_csv(
                 "car": car_name,
                 "data": graph_data,
                 "sector_results": sector_results,
-                "corner_exit_analysis": exit_segments
+                "corner_exit_analysis": exit_segments or [],
+                "trail_braking_analysis": trail_braking_segments or []
             }
 
         return {
@@ -146,7 +150,8 @@ async def analyze_motec_csv(
             "car": car_name,
             "data": graph_data,
             "sector_results": sector_results,
-            "corner_exit_analysis": exit_segments
+            "corner_exit_analysis": exit_segments or [],
+            "trail_braking_analysis": trail_braking_segments or []
         }
 
     except Exception as e:
@@ -191,11 +196,20 @@ def get_lap_data(lap_id: str):
         print(f"❌ 코너 피드백 분석 실패: {repr(e)}")
         corner_feedback = []
 
+    # ✅ 트레일 브레이킹 분석 추가
+    try:
+        df_controls = pd.DataFrame(controls)
+        trail_braking_segments = detect_trail_braking(df_controls)
+    except Exception as e:
+        print(f"❌ 트레일 브레이킹 분석 실패: {repr(e)}")
+        trail_braking_segments = []
+
     return sanitize_for_json({
         "track": meta["track"],
         "car": meta["car"],
         "data": controls,
         "sector_results": sector_results,
-        "corner_exit_analysis": corner_feedback
+        "corner_exit_analysis": corner_feedback or [],
+        "trail_braking_analysis": trail_braking_segments or []
     })
 
