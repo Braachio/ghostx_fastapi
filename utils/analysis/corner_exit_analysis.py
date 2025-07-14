@@ -132,7 +132,7 @@ def analyze_corner_exit_and_feedback(
 
 
             # 🧠 프롬프트 생성
-            prompt = build_feedback_prompt(segment, i, driver_level)
+            prompt = build_feedback_prompt(segment, i, mode="throttle", driver_level="beginner")
 
             # 🤖 AI 피드백 생성
             ai_feedback, source = generate_ai_feedback(prompt)

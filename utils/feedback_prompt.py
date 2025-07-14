@@ -20,7 +20,7 @@ def build_feedback_prompt(
     elif mode == "braking":
         return _build_braking_prompt(segment, segment_index)
     else:
-        raise ValueError("지원하지 않는 분석 모드입니다.")
+        raise ValueError(f"지원하지 않는 분석 모드입니다: {mode}")
 
 
 def _build_throttle_prompt(segment: Dict, index: int) -> str:
