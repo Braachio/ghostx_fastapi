@@ -10,7 +10,7 @@ def detect_trail_braking(
     steer_col: str = "steerangle",
     time_col: str = "time",
     brake_thresh: float = 0.05,
-    steer_thresh: float = 5.0,
+    steer_thresh: float = 10.0,
 ) -> List[Dict]:
     """
     트레일 브레이킹 구간을 감지하고, 각 구간에 대해 GPT 피드백을 생성한다.
