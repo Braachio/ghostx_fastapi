@@ -1,6 +1,6 @@
-from .ollama_provider import OllamaFeedbackProvider
+# from .ollama_provider import OllamaFeedbackProvider
 from .fallback import FallbackFeedbackProvider
-# from .gpt_provider import GPTFeedbackProvider  # GPT 붙일 때 활성화
+from .gpt_provider import GPTFeedbackProvider  # GPT 붙일 때 활성화
 
 from .base import AIFeedbackProvider
 
@@ -11,8 +11,8 @@ def generate_ai_feedback(prompt: str) -> tuple[str, str]:
     우선순위: Ollama → Fallback
     """
     providers: list[AIFeedbackProvider] = [
-        # GPTFeedbackProvider(),  # GPT 사용 시
-        OllamaFeedbackProvider(),
+        GPTFeedbackProvider(),  # GPT 사용 시
+        # OllamaFeedbackProvider(),
     ]
 
     for provider in providers:
