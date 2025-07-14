@@ -1,11 +1,8 @@
 import requests
+from .base import AIFeedbackProvider
 
-def generate_ai_feedback(prompt: str) -> tuple[str, str]:
-    """
-    GPT → Ollama 우선 시도 (현재는 Ollama만 사용)
-    실패 시 기본 메시지 반환
-    """
-    try:
+class OllamaFeedbackProvider(AIFeedbackProvider):
+    def generate(self, prompt: str) -> tuple[str, str]:
         response = requests.post(
             "http://localhost:11434/v1/chat/completions",
             headers={"Content-Type": "application/json"},
@@ -17,16 +14,9 @@ def generate_ai_feedback(prompt: str) -> tuple[str, str]:
                 ],
                 "temperature": 0.7
             },
-            timeout=5  # 5초 제한으로 빠른 실패 감지
+            timeout=5
         )
-        response.raise_for_status()  # HTTP 오류 발생 시 예외 처리
+        response.raise_for_status()
         result = response.json()
         feedback = result["choices"][0]["message"]["content"].strip()
         return feedback, "ollama"
-    
-    except Exception as e:
-        print(f"❌ Ollama 피드백 생성 실패: {e}")
-        return (
-            "⚠️ 현재 AI 피드백 서버에 연결할 수 없습니다.\n기본 분석 결과만 제공됩니다.",
-            "error"
-        )
