@@ -38,24 +38,37 @@ def detect_trail_braking(
 
         elif in_trail and (brake_val <= brake_thresh or steer_val <= steer_thresh):
             trail_end = i - 1
+            start_time = df.iloc[trail_start][time_col]
+            end_time = df.iloc[trail_end][time_col]
+            duration = end_time - start_time
+
+            if duration > 0.1:  # ✅ 0.1초 초과만 추가
+                zone = {
+                    'start_idx': trail_start,
+                    'end_idx': trail_end,
+                    'start_time': start_time,
+                    'end_time': end_time,
+                }
+                trail_zones.append(zone)
+
+            in_trail = False
+
+
+    # 마지막까지 이어진 경우 처리
+    if in_trail:
+        trail_end = len(df) - 1
+        start_time = df.iloc[trail_start][time_col]
+        end_time = df.iloc[trail_end][time_col]
+        duration = end_time - start_time
+
+        if duration > 0.1:  # ✅ 여기도 마찬가지로 제한
             zone = {
                 'start_idx': trail_start,
                 'end_idx': trail_end,
-                'start_time': df.iloc[trail_start][time_col],
-                'end_time': df.iloc[trail_end][time_col],
+                'start_time': start_time,
+                'end_time': end_time,
             }
             trail_zones.append(zone)
-            in_trail = False
-
-    if in_trail:
-        trail_end = len(df) - 1
-        zone = {
-            'start_idx': trail_start,
-            'end_idx': trail_end,
-            'start_time': df.iloc[trail_start][time_col],
-            'end_time': df.iloc[trail_end][time_col],
-        }
-        trail_zones.append(zone)
 
     # ✅ 각 구간에 대해 GPT 피드백 생성
     for idx, segment in enumerate(trail_zones):
