@@ -42,7 +42,7 @@ def detect_trail_braking(
             end_time = df.iloc[trail_end][time_col]
             duration = end_time - start_time
 
-            if duration > 0.1:  # ✅ 0.1초 초과만 추가
+            if duration > 0.2:  # ✅ 0.1초 초과만 추가
                 zone = {
                     'start_idx': trail_start,
                     'end_idx': trail_end,
@@ -61,7 +61,7 @@ def detect_trail_braking(
         end_time = df.iloc[trail_end][time_col]
         duration = end_time - start_time
 
-        if duration > 0.1:  # ✅ 여기도 마찬가지로 제한
+        if duration > 0.2:  # ✅ 여기도 마찬가지로 제한
             zone = {
                 'start_idx': trail_start,
                 'end_idx': trail_end,

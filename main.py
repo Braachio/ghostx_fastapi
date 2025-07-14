@@ -10,6 +10,10 @@ from api.motec import router as motec_router
 
 app = FastAPI()
 
+@app.get("/")
+def read_root():
+    return {"message": "🚀 GhostX API is running!"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
