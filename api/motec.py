@@ -8,10 +8,10 @@ from utils.supabase_client import supabase
 from utils.sanitize import sanitize_for_json
 from utils.calculate import calculate_distance, convert_speed_to_kmph
 from utils.analysis.corner_exit_analysis import analyze_corner_exit_and_feedback
+from utils.analysis.brake_analysis import detect_trail_braking
 from services.purification import remove_straight_sections, correct_autoblip_throttle
 from services.insert import extract_value, chunked_insert, chunked_insert_lap_raw, fetch_all_controls, fetch_all_vehicle_status
 from services.analyze_sector_times import upload_sector_results, get_sector_summary
-from utils.analysis.brake_analysis import detect_trail_braking
 
 router = APIRouter()
 
