@@ -2,67 +2,58 @@ import pandas as pd
 from typing import List, Dict
 
 from utils.feedback_prompt import build_feedback_prompt
-from services.ai_feedback import generate_ai_feedback  # GPT 호출 함수
+from services.ai_feedback import generate_ai_feedback
 
 def detect_trail_braking(
     df: pd.DataFrame,
     brake_col: str = "brake",
     steer_col: str = "steerangle",
     time_col: str = "time",
-    brake_thresh: float = 0.05,
     steer_thresh: float = 10.0,
+    brake_slope_thresh: float = -0.01,  # 기울기 음수 조건
 ) -> List[Dict]:
     """
-    트레일 브레이킹 구간을 감지하고, 각 구간에 대해 GPT 피드백을 생성한다.
-
-    Returns:
-        [{
-            'start_idx': int,
-            'end_idx': int,
-            'start_time': float,
-            'end_time': float,
-            'feedback': str
-        }, ...]
+    브레이크가 줄어들고 조향이 유지되는 트레일 브레이킹 구간 감지 + GPT 피드백 생성
     """
+    df = df.copy().reset_index(drop=True)
+    df["brake_diff"] = df[brake_col].diff().fillna(0)
+
     in_trail = False
     trail_start = None
     trail_zones = []
 
-    for i in range(len(df)):
-        brake_val = df.iloc[i][brake_col]
-        steer_val = abs(df.iloc[i][steer_col])
+    for i in range(1, len(df)):  # brake_diff는 1행부터 의미 있음
+        brake_gradient = df.at[i, "brake_diff"]
+        steer_val = abs(df.at[i, steer_col])
 
-        if not in_trail and brake_val > brake_thresh and steer_val > steer_thresh:
+        if not in_trail and brake_gradient < brake_slope_thresh and steer_val > steer_thresh:
             in_trail = True
             trail_start = i
 
-        elif in_trail and (brake_val <= brake_thresh or steer_val <= steer_thresh):
+        elif in_trail and (brake_gradient >= 0 or steer_val <= steer_thresh):
             trail_end = i - 1
             zone = {
                 'start_idx': trail_start,
                 'end_idx': trail_end,
-                'start_time': df.iloc[trail_start][time_col],
-                'end_time': df.iloc[trail_end][time_col],
+                'start_time': df.at[trail_start, time_col],
+                'end_time': df.at[trail_end, time_col],
             }
             trail_zones.append(zone)
             in_trail = False
 
-
-    # 마지막까지 이어진 경우 처리
     if in_trail:
         trail_end = len(df) - 1
         zone = {
             'start_idx': trail_start,
             'end_idx': trail_end,
-            'start_time': df.iloc[trail_start][time_col],
-            'end_time': df.iloc[trail_end][time_col],
+            'start_time': df.at[trail_start, time_col],
+            'end_time': df.at[trail_end, time_col],
         }
         trail_zones.append(zone)
 
-    # ✅ 각 구간에 대해 GPT 피드백 생성
+    # ✅ GPT 피드백 생성
     for idx, segment in enumerate(trail_zones):
         try:
-            # 분석 지표 계산 (간단 예시, 필요시 개선 가능)
             duration = segment["end_time"] - segment["start_time"]
             steer_slice = df.iloc[segment["start_idx"]:segment["end_idx"] + 1][steer_col]
             avg_steer_variability = steer_slice.diff().abs().mean()
@@ -72,7 +63,6 @@ def detect_trail_braking(
             segment["steer_variability"] = avg_steer_variability
             segment["avg_deceleration"] = avg_deceleration
 
-            # 🧠 프롬프트 생성 및 GPT 호출
             prompt = build_feedback_prompt(segment, idx, mode="braking", driver_level="beginner")
             feedback, _ = generate_ai_feedback(prompt)
 
