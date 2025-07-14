@@ -35,3 +35,5 @@ certifi==2025.4.26
 click==8.2.1
 colorama==0.4.6
 six==1.17.0
+
+python-dotenv
