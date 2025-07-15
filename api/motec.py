@@ -48,6 +48,13 @@ async def analyze_motec_csv(
         if len(lines) > 15:
             lines.pop(15)
 
+        lap_time = extract_value(lines, "Duration")
+        # 🔢 랩타임 파싱 (예: "100.21 s" → 100.21)
+        try:
+            lap_time_value = float(lap_time.strip().split()[0])
+        except Exception:
+            lap_time_value = None        
+            
         track_name = extract_value(lines, "Venue")
         car_name = extract_value(lines, "Vehicle")
 
@@ -107,7 +114,8 @@ async def analyze_motec_csv(
                 "weather": weather,
                 "air_temp": air_temp,
                 "track_temp": track_temp,
-                "hash": lap_hash
+                "hash": lap_hash,
+                "lap_time": lap_time_value
             }).execute()
             lap_id = meta_resp.data[0]["id"]
 
@@ -138,6 +146,7 @@ async def analyze_motec_csv(
                 "status": "✅ 분석 및 저장 완료",
                 "track": track_name,
                 "car": car_name,
+                "lap_time": lap_time_value,
                 "data": graph_data,
                 "sector_results": sector_results,
                 "corner_exit_analysis": exit_segments or [],
@@ -148,6 +157,7 @@ async def analyze_motec_csv(
             "status": "✅ 분석 완료 (저장 안 함)",
             "track": track_name,
             "car": car_name,
+            "lap_time": lap_time_value,
             "data": graph_data,
             "sector_results": sector_results,
             "corner_exit_analysis": exit_segments or [],

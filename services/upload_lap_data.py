@@ -24,7 +24,9 @@ def upload_lap_data(supabase: Client, user_id: str, track: str, df: pd.DataFrame
         "track": track,
         "car": car,
         "lap_time": lap_time,
-        "hash": lap_hash  # 해시 저장
+        "hash": lap_hash,  # 해시 저장
+        "display_name": display_name,
+        "lap_time": lap_time,
     }).execute()
 
     lap_id = insert_response.data[0]['id']
