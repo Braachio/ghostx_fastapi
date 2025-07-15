@@ -140,7 +140,6 @@ def analyze_corner_exit_and_feedback(
             segment["feedback_source"] = source
             segment["raw_prompt"] = prompt  # (선택) 추후 분석용
 
-        print(f"🚩 탈출 구간 감지 개수: {len(segments)}")
         return segments
 
     except Exception as e:
