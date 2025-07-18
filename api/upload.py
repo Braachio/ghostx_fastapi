@@ -2,16 +2,16 @@ from fastapi import UploadFile, Form, File, APIRouter
 from fastapi.responses import JSONResponse
 from io import StringIO
 import pandas as pd
-import hashlib
 
 from utils.supabase_client import supabase
-from utils.sanitize import sanitize_for_json
-from utils.calculate import calculate_distance, convert_speed_to_kmph
+
+from utils.calculate import calculate_distance
 from utils.analysis.corner_exit_analysis import analyze_corner_exit_and_feedback
 from utils.analysis.corner_entry_analysis import analyze_corner_entry_and_feedback
 from services.purification import remove_straight_sections, correct_autoblip_throttle
-from services.insert import extract_value, chunked_insert, chunked_insert_lap_raw, fetch_all_controls, fetch_all_vehicle_status
+from services.insert import extract_value, chunked_insert, chunked_insert_lap_raw
 from services.analyze_sector_times import upload_sector_results, get_sector_summary
+from services.upload_lap_data import generate_lap_hash
 
 router = APIRouter()
 
@@ -27,11 +27,7 @@ def deduplicate_columns(columns):
             seen[col_lower] = 0
         result.append(col_lower)
     return result
-
-def generate_lap_hash(df: pd.DataFrame) -> str:
-    data_str = df.to_csv(index=False)
-    return hashlib.sha256(data_str.encode()).hexdigest()
-
+    
 @router.post("/analyze-motec-csv")
 async def analyze_motec_csv(
     file: UploadFile = File(...),
@@ -72,8 +68,14 @@ async def analyze_motec_csv(
 
         if 'distance' not in df.columns:
             df = calculate_distance(df)
+        # df = convert_speed_to_kmph(df)
 
-        df = convert_speed_to_kmph(df)
+        # 정제 및 보정
+        df, _ = correct_autoblip_throttle(df)
+        df = remove_straight_sections(df)
+
+        # 인덱스 초기화 → 분석 및 시각화 인덱스 정렬 보장
+        df = df.reset_index(drop=True)
 
         # ✅ 여기서 분리
         control_cols = ["time", "throttle", "brake", "steerangle", "speed", "rpms", "gear", "distance"]
@@ -95,12 +97,20 @@ async def analyze_motec_csv(
         if "gear" in df.columns:
             df["gear"] = pd.to_numeric(df["gear"], errors="coerce").fillna(0).astype(int)
 
-        graph_keys = ["time", "throttle", "brake", "steerangle", "gear", "speed"]
-        graph_data = df[[key for key in graph_keys if key in df.columns]].to_dict(orient="records")
+
         sector_results = get_sector_summary(df)
 
         # ✅ 중복 확인
         lap_hash = generate_lap_hash(df)
+
+        # ✅ 코너 진입 구간 분석
+        entry_segments = analyze_corner_entry_and_feedback(control_df)
+
+        # ✅ 코너 탈출 구간 분석
+        exit_segments = analyze_corner_exit_and_feedback(control_df, vehicle_df)
+
+        graph_keys = ["time", "throttle", "brake", "steerangle", "gear", "speed", "distance"]
+        graph_data = df[[key for key in graph_keys if key in df.columns]].to_dict(orient="records")
 
         if save:
             existing = supabase.table("lap_meta").select("id").eq("hash", lap_hash).execute()
@@ -136,12 +146,6 @@ async def analyze_motec_csv(
 
             upload_sector_results(supabase, lap_id, user_id, track_name, df)
 
-            # ✅ 코너 진입 구간 분석
-            entry_segments = analyze_corner_entry_and_feedback(control_df)
-
-            # ✅ 코너 탈출 구간 분석
-            exit_segments = analyze_corner_exit_and_feedback(control_df, vehicle_df)
-
             return {
                 "status": "✅ 분석 및 저장 완료",
                 "track": track_name,
@@ -166,60 +170,3 @@ async def analyze_motec_csv(
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": f"분석 실패: {repr(e)}"})
-
-@router.get("/lap/{lap_id}")
-def get_lap_data(lap_id: str):
-    # lap_meta 정보 조회
-    meta = supabase.table("lap_meta").select("*").eq("id", lap_id).single().execute().data
-    if not meta:
-        return JSONResponse(status_code=404, content={"error": "랩 정보를 찾을 수 없습니다."})
-
-    # lap_controls 가져오기
-    controls = fetch_all_controls(lap_id)
-    vehicle = fetch_all_vehicle_status(lap_id)
-
-    try:
-        sector_results = supabase.table("sector_results").select("*").eq("lap_id", lap_id).execute().data
-    except Exception as e:
-        print(f"❌ sector_results 조회 실패: {repr(e)}")
-        sector_results = []
-
-    # ✅ 자연어 피드백 추가 처리
-    try:
-        df_controls = pd.DataFrame(controls)
-        df_vehicle = pd.DataFrame(vehicle)
-
-        df = pd.merge(df_controls, df_vehicle, on="time", how="inner")
-
-        required_columns = [
-            "steerangle", "throttle",
-            "wheel_speed_lf", "wheel_speed_rf",
-            "wheel_speed_lr", "wheel_speed_rr"
-        ]
-
-        if all(col in df.columns for col in required_columns):
-            corner_feedback = analyze_corner_exit_and_feedback(controls, vehicle)
-        else:
-            print("⚠️ 코너 분석에 필요한 컬럼이 부족함: {[col for col in required_columns if col not in df.columns]}")
-            corner_feedback = []
-    except Exception as e:
-        print(f"❌ 코너 피드백 분석 실패: {repr(e)}")
-        corner_feedback = []
-
-    # ✅ 트레일 브레이킹 분석 추가
-    try:
-        df_controls = pd.DataFrame(controls)
-        entry_segments = analyze_corner_entry_and_feedback(df_controls)
-    except Exception as e:
-        print(f"❌ 트레일 브레이킹 분석 실패: {repr(e)}")
-        entry_segments = []
-
-    return sanitize_for_json({
-        "track": meta["track"],
-        "car": meta["car"],
-        "data": controls,
-        "sector_results": sector_results,
-        "corner_exit_analysis": corner_feedback or [],
-        "corner_entry_analysis": entry_segments or []
-    })
-

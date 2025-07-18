@@ -14,6 +14,8 @@ def extract_value(lines, keyword):
             continue
     return "알 수 없음"
 
+
+
 def chunked_insert(table_name: str, records: list, chunk_size: int = 100):
     for i in range(0, len(records), chunk_size):
         chunk = records[i:i + chunk_size]
@@ -42,6 +44,7 @@ def chunked_insert_lap_raw(lap_id: str, df: pd.DataFrame, chunk_size: int = 100)
         else:
             print(f"✅ lap_raw chunk {i // chunk_size} 삽입 성공 ({len(chunk)}개)")
 
+
 def fetch_all_controls(lap_id: str, page_size: int = 1000) -> list:
     all_data = []
     for offset in range(0, 100000, page_size):
@@ -62,6 +65,8 @@ def fetch_all_controls(lap_id: str, page_size: int = 1000) -> list:
             break
     print(f"🔍 전체 가져온 lap_controls 수: {len(all_data)}")
     return all_data
+
+
 
 def fetch_all_vehicle_status(lap_id: str, page_size: int = 1000) -> list:
     all_data = []

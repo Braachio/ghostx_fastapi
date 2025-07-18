@@ -4,8 +4,8 @@ import os
 
 
 # API 모듈 import
-from api.analyze import router as analyze_router
-from api.motec import router as motec_router
+from api.upload import router as upload_router
+from api.get_lap import router as get_lap_router
 
 
 app = FastAPI()
@@ -23,8 +23,8 @@ app.add_middleware(
 
 
 # 라우터 등록
-app.include_router(analyze_router, prefix="/api")
-app.include_router(motec_router, prefix="/api")
+app.include_router(upload_router, prefix="/api")
+app.include_router(get_lap_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
