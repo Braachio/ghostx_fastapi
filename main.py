@@ -15,7 +15,7 @@ def read_root():
 # ✅ CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://ghostx.site"],  # ⛔️ 운영 시에는 ["https://ghostx.site"] 로 바꾸세요!
+    allow_origins=["https://ghostx.site", "http://localhost:3000"],  # ⛔️ 운영 시에는 ["https://ghostx.site"] 로 바꾸세요!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
