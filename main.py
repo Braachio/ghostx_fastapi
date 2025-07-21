@@ -12,10 +12,13 @@ app = FastAPI()
 def read_root():
     return {"message": "🚀 GhostX API is running!"}
 
-# ✅ CORS 설정
+# ✅ CORS 수정: allow_credentials=True일 때 "*" 금지
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://ghostx.site", "http://localhost:3000"],  # ⛔️ 운영 시에는 ["https://ghostx.site"] 로 바꾸세요!
+    allow_origins=[
+        "https://ghostx.site",           # 🔒 운영 도메인
+        "http://localhost:3000"          # 💻 개발용 도메인
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,6 +30,5 @@ app.include_router(get_lap_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
-
-    port = int(os.environ.get("PORT", 8000))  # Render는 기본적으로 10000
+    port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
