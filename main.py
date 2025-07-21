@@ -2,11 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
-
 # API 모듈 import
 from api.upload import router as upload_router
 from api.get_lap import router as get_lap_router
-
 
 app = FastAPI()
 
@@ -14,13 +12,14 @@ app = FastAPI()
 def read_root():
     return {"message": "🚀 GhostX API is running!"}
 
+# ✅ CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://ghostx.site"],  # ⛔️ 운영 시에는 ["https://ghostx.site"] 로 바꾸세요!
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # 라우터 등록
 app.include_router(upload_router, prefix="/api")
