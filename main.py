@@ -17,7 +17,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://ghostx.site",           # 🔒 운영 도메인
-        "http://localhost:3000"          # 💻 개발용 도메인
+        "http://localhost:8000"          # 💻 개발용 도메인
     ],
     allow_credentials=True,
     allow_methods=["*"],
